@@ -1,0 +1,203 @@
+<html>
+    <head>
+        <script>
+            function getPos(obj) {
+                var curleft = curtop = 0;
+                if (obj && obj.offsetParent) {
+                    do {
+                        curleft += obj.offsetLeft;
+                        curtop += obj.offsetTop;
+                    } while (obj = obj.offsetParent);
+                }
+                return {'x':curleft, 'y':curtop};
+            }
+
+
+            // env and consts
+            function SimEnv()
+            {
+                // key state
+                var black = 1;
+                var white = 2;
+                var empty = 0;
+
+                // data info
+                var size = 19;
+                var next = black;
+                var data = new Array();
+                for(var i=0;i<size;++i)
+                {
+                    data[i] = new Array();
+                    for(var j=0;j<size;++j)
+                    {
+                        data[i][j] = empty;
+                    }
+                }
+                var ret = {'empty':empty,'black':black,'white':white,'size':size,'next':next,'data':data};
+                return ret;
+            }
+
+            function PlotEnv()
+            {
+                var cellSize = 30;
+                var pieceSizeRatio = 0.8;
+                var lineWidth= 2;
+                var lineColor = 'rgb(200,200,200)';
+                var bgColor = 'rgb(250,250,200)';
+                var simEnv = new SimEnv;
+                var ctx = document.createElement("canvas").getContext('2d');
+                var ret = {'cellSize':cellSize,'pieceSizeRatio':pieceSizeRatio,'lineWidth':lineWidth,'lineColor':lineColor,'bgColor':bgColor,'simEnv':simEnv,'ctx':ctx};
+                return ret;
+            }
+
+            // setup the canvas size and position 
+            function plotSetup(plotEnv)
+            {
+                var width = plotEnv.cellSize * (plotEnv.simEnv.size+1);
+                var height = width;
+                var ctx = plotEnv.ctx;
+                ctx.canvas.width = width;
+                ctx.canvas.height = height;
+            }
+            // plot the back ground and piece
+            function plotBg(plotEnv)
+            {
+                var ctx = plotEnv.ctx;
+                ctx.save();
+                // bg
+                ctx.fillStyle = plotEnv.bgColor;
+                ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+                ctx.strokeRect();
+
+                // lines
+                var size = plotEnv.simEnv.size;
+                var cellSize = plotEnv.cellSize;
+                ctx.strokeStyle = plotEnv.lineColor;
+                ctx.lineWidth = plotEnv.lineWidth;
+                for(var i=0;i<size;++i)
+                {
+                    var x = (i+1)*cellSize;
+                    ctx.beginPath();
+                    ctx.moveTo(x,cellSize);
+                    ctx.lineTo(x,cellSize*size)
+                    ctx.stroke();
+                }
+                for(var i=0;i<size;++i)
+                {
+                    var y = (i+1)*cellSize;
+                    ctx.beginPath();
+                    ctx.moveTo(cellSize,y);
+                    ctx.lineTo(cellSize*size,y)
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function plotOnePiece(plotEnv,nx,ny,type)
+            {
+                var size = plotEnv.simEnv.size;
+                if(nx<0 || nx>=size || ny<0 || ny>=size)
+                {
+                    return;
+                }
+                var cellSize = plotEnv.cellSize;
+                var pieceSize = cellSize * plotEnv.pieceSizeRatio;
+                var x = (nx+1)*cellSize;
+                var y = (ny+1)*cellSize;
+                var ctx = plotEnv.ctx;
+                var pieceColor;
+                if(type == plotEnv.simEnv.black)
+                {
+                    pieceColor = 'rgb(0,0,0)';
+                }
+                else if(type == plotEnv.simEnv.white)
+                {
+                    pieceColor = 'rgb(250,250,250)';
+                }
+                else
+                {
+                    // no need to plot
+                    return ;
+                }
+                ctx.save();
+                ctx.beginPath();
+                ctx.fillStyle = pieceColor;
+                ctx.arc(x,y,pieceSize/2,0,2*Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function nextEng(simEnv)
+            {
+                var data = simEnv.data;
+                var black = simEnv.black;
+                var white = simEnv.white;
+                var empty = simEnv.empty;
+                var next = simEnv.next;
+
+            }
+
+            function rmEng(simEnv)
+            {
+            }
+
+            function mDown(ev,plotEnv)
+            {
+                var str;
+                var offset = getPos(plotEnv.ctx.canvas);
+                str = "mouse down: " + ev.pageX + "," + ev.pageY + "c:" + (ev.pageX-offset.x) + "," + (ev.pageY-offset.y);
+                document.getElementById('text').innerHTML = str;
+
+                // plotting
+                var x = ev.pageX-offset.x;
+                var y = ev.pageY-offset.y;
+                offset = xy2n(plotEnv,x,y);
+                if(offset.x<0 || offset.y<0)
+                {
+                    return;
+                }
+                if(plotEnv.simEnv.data[offset.x][offset.y] == plotEnv.simEnv.empty)
+                {
+                    plotEnv.simEnv.data[offset.x][offset.y] = plotEnv.simEnv.next;
+                    plotOnePiece(plotEnv,offset.x,offset.y,plotEnv.simEnv.next);
+                    if(plotEnv.simEnv.next == plotEnv.simEnv.white)
+                    {
+                        plotEnv.simEnv.next = plotEnv.simEnv.black;
+                    }
+                    else
+                    {
+                        plotEnv.simEnv.next = plotEnv.simEnv.white;
+                    }
+                }
+            }
+            function xy2n(plotEnv,x,y)
+            {
+                var cellSize = plotEnv.cellSize;
+                var size = plotEnv.simEnv.size;
+                var nx = -1;
+                var ny = -1;
+                x = x-0.5*cellSize;
+                y = y-0.5*cellSize;
+                if(x>0 && x<size*cellSize && y>0 && y<size*cellSize)
+                {
+                    nx = Math.floor(x/cellSize);
+                    ny = Math.floor(y/cellSize);
+                }
+
+                return {'x':nx,'y':ny};
+            }
+
+            // main code
+            var plotEnv = new PlotEnv();
+            plotSetup(plotEnv);
+            plotBg(plotEnv);
+        </script>
+    </head>
+    <body onMouseDown="mDown(event,plotEnv);">
+        <div id="text">Wei Qi</div>
+        <script>
+            document.body.appendChild(plotEnv.ctx.canvas);
+        </script>
+    </body>
+</html>
