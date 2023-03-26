@@ -1,4 +1,5 @@
 #!/home/jchao/pkgs/node/bin/node
+# testing
 var hanoiEnv = [[],[],[]];
 var num = 0;
 function hanoi_init(hanoiEnv, n){
